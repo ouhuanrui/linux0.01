@@ -9,6 +9,9 @@ TSS0_SEL = 0x20
 LDT0_SEL = 0X28
 TSS1_SEL = 0x30
 LDT1_SEL = 0X38
+#the third task
+TSS2_SEL = 0x40
+LDT2_SEL = 0x48
 
 
 
@@ -130,14 +133,21 @@ timer_interrupt:
 	outb %al,$0x20
 	movl $1,%eax
 	cmpl %eax,current
+	je 2f
+	movl $2,%eax
+	cmpl %eax,current
 	je 1f
-	movl %eax,current
+	movl $1,current
 	ljmp $TSS1_SEL,$0
-	jmp 2f
+	jmp 3f
 1:
 	movl $0,current
 	ljmp $TSS0_SEL,$0
+	jmp 3f
 2:
+	movl $2,current
+	ljmp $TSS2_SEL,$0
+3:
 	popl %eax
 	pop %ds
 	iret
@@ -186,6 +196,9 @@ gdt:
 	.word 0x40,ldt0,0xe200,0x0
 	.word 0x68,tss1,0xe900,0x0
 	.word 0x40,ldt1,0xe200,0x0
+	#the third task
+	.word 0x68,tss2,0xe900,0x0
+	.word 0x40,ldt2,0xe200,0x0
 end_gdt:
 	.fill 128,4,0
 init_stack:
@@ -196,6 +209,8 @@ init_stack:
 ldt0:
 	.quad 0x0000000000000000
 	.quad 0x00c0fa00000003ff
+	.quad 0x00c0f200000003ff
+	#the third task
 	.quad 0x00c0f200000003ff
 tss0:
 	.long 0
@@ -210,12 +225,12 @@ tss0:
 krn_stk0:
 
 
-
-
 .align 8
 ldt1:
 	.quad 0x0000000000000000
 	.quad 0x00c0fa00000003ff
+	.quad 0x00c0f200000003ff
+	#the third task
 	.quad 0x00c0f200000003ff
 tss1:
 	.long 0
@@ -229,6 +244,26 @@ tss1:
 
 	.fill 128,4,0
 krn_stk1:
+
+.align 8
+ldt2:
+	.quad 0x0000000000000000
+	.quad 0x00c0fa00000003ff
+	.quad 0x00c0f200000003ff
+	#the third task
+	.quad 0x00c0f200000003ff
+tss2:
+	.long 0
+	.long krn_stk2,0x10
+	.long 0,0,0,0,0
+	.long task2,0x200
+	.long 0,0,0,0
+	.long usr_stk2,0,0,0
+	.long 0x17,0x0f,0x17,0x17,0x17,0x17
+	.long LDT2_SEL,0x8000000
+
+	.fill 128,4,0
+krn_stk2:
 
 task0:
 	movl $0x17,%eax
@@ -249,10 +284,22 @@ task1:
 1:
 	loop 1b
 	jmp task1
+	
+task2:
+	movl $0x17, %eax
+	movw %ax, %ds
+	movb $68,%al
+	int $0x80
+	movl $0xfff,%ecx
+1:
+	loop 1b
+	jmp task2
 
 	.fill 128,4,0
-
 usr_stk1:
+
+	.fill 128,4,0
+usr_stk2:
 	
 	
 	
