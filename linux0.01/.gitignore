@@ -1,0 +1,7 @@
+*.o
+Image
+System.map
+a.img
+boot
+system
+
